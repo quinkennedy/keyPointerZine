@@ -9,10 +9,13 @@ int margin = 10;
 Foldable foldable;
 boolean debug = false;
 boolean alternatePointSide = true;
+PFont backCoverFont;
+int backCoverFontSize = 35;
 
 void setup(){
   size(400, 400, P2D);
   initCover();
+  backCoverFont = createFont("SourceCodePro-Medium.ttf", backCoverFontSize);
   foldable = new Foldable(8.5, 11, .25, 1, "test");
   subsections = new Section[3];
   for(int i = 0; i < subsections.length; i++){
@@ -62,12 +65,13 @@ void renderPage(PGraphics graphics, int pageWidthPx, int pageHeightPx, int pageN
     renderCover(graphics, pageWidthPx, pageHeightPx, pageNumber);
   } else if (pageNumber == 11){
     //back cover
-    String text = "A generative zine\n";
+    graphics.textFont(backCoverFont);
+    String text = "a generative zine\n";
     text += "produced by PaperBon.net\n";
     text += "code available at\n";
     text += "https://github.com/quinkennedy/keyPointerZine/\n";
     graphics.fill(0);
-    graphics.textSize(40);
+    graphics.textSize(backCoverFontSize);
     float textY = graphics.textAscent() + 50;
     if (targetY < pageHeightPx / 2){
       textY += pageHeightPx / 2;
