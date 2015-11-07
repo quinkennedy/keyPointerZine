@@ -37,7 +37,7 @@ class Foldable{
   /*
    * returns false if there are no more pages to render
    */
-  public boolean renderNextPage(keyPointer p){
+  public boolean renderNextPage(keyPointerZine p){
     if (!endOfPdf){
       ZinePageLayout layoutPage = layout[currPage][currRow][currColumn];
       
