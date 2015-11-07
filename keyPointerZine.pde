@@ -1,112 +1,129 @@
 int numberDrawings = 5;
-int selectedDrawings[];
-int iteration = 0;
-int activeSubsection = 0;
 int targetX, targetY;
-PGraphics currGraphics;
+boolean newCopy = true;
 import processing.pdf.*;
 
-Rectangle[] subsections;
+Section[] subsections;
 int margin = 10;
 Foldable foldable;
 
 void setup(){
-  size(800, 800);
-  init();
-  foldable = new Foldable(8.5, 11, "test");
+  size(400, 400, P2D);
+  foldable = new Foldable(8.5, 11, 2, "test");
+  subsections = new Section[3];
+  for(int i = 0; i < subsections.length; i++){
+    subsections[i] = new Section();
+  }
 }
 
-void renderPage(PGraphics graphics, int pageWidth, int pageHeight, int pageNumber){
+void prepPage(int pageWidthPx, int pageHeightPx, int pageNumber){
+  layoutSubsections(pageWidthPx, pageHeightPx);
+  for(int i = 0; i < subsections.length; i++){
+    Section subsection = subsections[i];
+    chooseDrawings(subsection);
+    subsection.graphic = createGraphics(pageWidthPx, pageHeightPx, P2D);
+    subsection.graphic.beginDraw();
+    for(int j = 0; j < subsection.selectedDrawings.length; j++){
+      int relativeTargetX = int(targetX - subsection.placement.x);
+      int relativeTargetY = int(targetY - subsection.placement.y);
+      doDrawing(subsection.graphic, 
+                subsection.selectedDrawings[j], 
+                relativeTargetX, 
+                relativeTargetY);
+    }
+    subsection.graphic.endDraw();
+  }
+}
+
+void renderPage(PGraphics graphics, int pageWidthPx, int pageHeightPx, int pageNumber){
+  //to be able to see pages while debugging
   graphics.stroke(150);
   graphics.noFill();
-  graphics.rect(0, 0, pageWidth, pageHeight);
+  graphics.rect(0, 0, pageWidthPx, pageHeightPx);
   println("rendering page " + pageNumber);
-  graphics.fill(0);
-  graphics.stroke(0);
-  graphics.textSize(100);
-  graphics.text(pageNumber, pageWidth/2, pageHeight/2);
+  
+  //drawing content
+  for(int i = 0; i < subsections.length; i++){
+    Section subsection = subsections[i];
+    graphics.image(subsection.graphic, subsection.placement.x, subsection.placement.y);
+  }
+  
+  //to be able to see page number while debugging
+  graphics.fill(0, 100);
+  graphics.textSize(200);
+  graphics.text(pageNumber, pageWidthPx/2, pageHeightPx/2);
+}
+
+void initCopy(int copyNumber, int pageWidthPx, int pageHeightPx, float pageWidthIn, float pageHeightIn){
+  println("prep copy " + copyNumber);
+  targetX = int(random(pageWidthPx));
+  targetY = int(random(pageHeightPx));
+  newCopy = true;
 }
 
 void draw(){
-  if (iteration == 0){
+  if (newCopy){
+    newCopy = false;
+    //order matters-ish
+    while(!newCopy && foldable.renderNextPage(this));
+  } else {
+    println("done?");
     background(255);
-    while(foldable.renderNextPage(this));
-  }
-  if (activeSubsection < subsections.length){
-    chooseDrawings();
-    Rectangle subsection = subsections[activeSubsection];
-    currGraphics = createGraphics((int)subsection.w, (int)subsection.h);
-    currGraphics.beginDraw();
-    for(int i = 0; i < selectedDrawings.length; i++){
-      doDrawing(currGraphics, selectedDrawings[i], int(targetX - subsection.x), int(targetY - subsection.y));
-    }
-    currGraphics.endDraw();
-    image(currGraphics, subsection.x, subsection.y);
-    activeSubsection++;
-  }
-  iteration++;
-}
-
-void keyPressed(){
-  if (key == ENTER){
-    init();
+    fill(0);
+    text("done?", 20, 20);
   }
 }
 
-void chooseDrawings(){
+void chooseDrawings(Section section){
   int numDrawings = 1;
-  selectedDrawings = new int[numDrawings];
+  section.selectedDrawings = new int[numDrawings];
   for(int i = 0; i < numDrawings; i++){
-    selectedDrawings[i] = int(random(0, numberDrawings));
+    section.selectedDrawings[i] = int(random(0, numberDrawings));
   }
 }
 
-void init(){
-  iteration = 0;
-  activeSubsection = 0;
-  targetX = int(random(width));// int(random(0, width*2)-width/2);
-  targetY = int(random(height));//int(random(0, height*2)-height/2);
-  layoutSubsections();
-}
-
-void layoutSubsections(){
+void layoutSubsections(int maxX, int maxY){
   //layoutSubsectionsRandom();
-  layoutSubsectionsNonOverlap();
+  layoutSubsectionsNonOverlap(maxX, maxY);
 }
 
-Rectangle getRandomRect(){
-  int canvasArea = width*height;
+Rectangle getRandomRect(int maxX, int maxY){
+  int canvasArea = maxX*maxY;
   int rectMaxArea = canvasArea/3;
   int rectMinArea = canvasArea/10;
-  int rectWidth = int(random(width - rectMinArea/height) + rectMinArea/height);
+  int rectWidth = int(random(maxX - rectMinArea/maxY) + rectMinArea/maxY);
   int rectHeight = int(random(rectMaxArea/rectWidth - rectMinArea/rectWidth) + rectMinArea/rectWidth);
-  int rectX = int(random(width - rectWidth - margin));
-  int rectY = int(random(height - rectHeight - margin));
+  int rectX = int(random(maxX - rectWidth - margin));
+  int rectY = int(random(maxY - rectHeight - margin));
   return new Rectangle(rectX, rectY, rectWidth, rectHeight);
 }
 
-void layoutSubsectionsRandom(){
-  subsections = new Rectangle[3];
+void layoutSubsectionsRandom(int maxX, int maxY){
   for(int i = 0; i < subsections.length; i++){
-    subsections[i] = getRandomRect();
+    subsections[i].placement = getRandomRect(maxX, maxY);
   }
 }
 
 
 
-void layoutSubsectionsNonOverlap(){
-  subsections = new Rectangle[3];
+void layoutSubsectionsNonOverlap(int maxX, int maxY){
   for(int i = 0; i < subsections.length; i++){
     boolean fit = false;
     while(!fit){
-      subsections[i] = getRandomRect();
-      Rectangle bloated = subsections[i].bloat(margin);
+      subsections[i].placement = getRandomRect(maxX, maxY);
+      Rectangle bloated = subsections[i].placement.bloat(margin);
       fit = true;
       for(int j = 0; j < i && fit; j++){
-        if(bloated.overlapsWith(subsections[j])){
+        if(bloated.overlapsWith(subsections[j].placement)){
           fit = false;
         }
       }
     }
   }
+}
+
+class Section{
+  Rectangle placement;
+  int[] selectedDrawings;
+  PGraphics graphic;
 }
