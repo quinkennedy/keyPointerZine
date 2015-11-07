@@ -1,7 +1,8 @@
+import processing.pdf.*;
+
 int numberDrawings = 5;
 int targetX, targetY;
 boolean newCopy = true;
-import processing.pdf.*;
 
 Section[] subsections;
 int margin = 10;
@@ -9,6 +10,7 @@ Foldable foldable;
 
 void setup(){
   size(400, 400, P2D);
+  initCover();
   foldable = new Foldable(8.5, 11, .25, 2, "test");
   subsections = new Section[3];
   for(int i = 0; i < subsections.length; i++){
@@ -17,23 +19,30 @@ void setup(){
 }
 
 void prepPage(int pageWidthPx, int pageHeightPx, int pageNumber){
-  layoutSubsections(pageWidthPx, pageHeightPx);
-  for(int i = 0; i < subsections.length; i++){
-    Section subsection = subsections[i];
-    chooseDrawings(subsection);
-    subsection.graphic = createGraphics((int)subsection.placement.w, 
-                                        (int)subsection.placement.h, 
-                                        P2D);
-    subsection.graphic.beginDraw();
-    for(int j = 0; j < subsection.selectedDrawings.length; j++){
-      int relativeTargetX = int(targetX - subsection.placement.x);
-      int relativeTargetY = int(targetY - subsection.placement.y);
-      doDrawing(subsection.graphic, 
-                subsection.selectedDrawings[j], 
-                relativeTargetX, 
-                relativeTargetY);
+  if (pageNumber == 0){
+    prepCover(pageWidthPx, pageHeightPx, pageNumber);
+  } else if (pageNumber == 11){
+  } else {
+    layoutSubsections(pageWidthPx, pageHeightPx);
+    for(int i = 0; i < subsections.length; i++){
+      Section subsection = subsections[i];
+      chooseDrawings(subsection);
+      subsection.graphic = createGraphics((int)subsection.placement.w, 
+                                          (int)subsection.placement.h, 
+                                          P2D);
+      subsection.graphic.beginDraw();
+      boolean oddPage = (pageNumber % 2 == 1);
+      int targetX = (oddPage ? (pageWidthPx - this.targetX) : this.targetX);
+      for(int j = 0; j < subsection.selectedDrawings.length; j++){
+        int relativeTargetX = int(targetX - subsection.placement.x);
+        int relativeTargetY = int(targetY - subsection.placement.y);
+        doDrawing(subsection.graphic, 
+                  subsection.selectedDrawings[j], 
+                  relativeTargetX, 
+                  relativeTargetY);
+      }
+      subsection.graphic.endDraw();
     }
-    subsection.graphic.endDraw();
   }
 }
 
@@ -45,23 +54,17 @@ void renderPage(PGraphics graphics, int pageWidthPx, int pageHeightPx, int pageN
   println("rendering page " + pageNumber);
   
   if (pageNumber == 0){
-    String title = "Key Point";// " + targetX + "," + targetY;
+    //front cover
+    renderCover(graphics, pageWidthPx, pageHeightPx, pageNumber);
+  } else if (pageNumber == 11){
+    //back cover
+    String text = "A generative zine\n";
+    text += "produced by PaperBon.net\n";
+    text += "code available at\n";
+    text += "https://github.com/quinkennedy/keyPointerZine/\n";
     graphics.fill(0);
-    graphics.textSize(100);
-    int textY = (int)graphics.textAscent();
-    if (targetY < pageHeightPx/2) {
-      textY = pageHeightPx - (int)graphics.textDescent();
-    }
-    int textX = (int)map(targetX, 
-                         0, 
-                         pageWidthPx,
-                         pageWidthPx - (int)graphics.textWidth(title), 
-                         0);
-    graphics.text(title, textX, textY);
-    graphics.noStroke();
-    graphics.ellipse(targetX, targetY, 20, 20);
-    graphics.textSize(20);
-    graphics.text(targetX + ", " + targetY, targetX + 10, targetY);
+    graphics.textSize(40);
+    graphics.text(text, 50, graphics.textAscent() + 50);
   } else {
     //drawing content
     for(int i = 0; i < subsections.length; i++){
@@ -108,12 +111,12 @@ void layoutSubsections(int maxX, int maxY){
   layoutSubsectionsNonOverlap(maxX, maxY);
 }
 
-Rectangle getRandomRect(int maxX, int maxY){//maxX = 1275, maxY = 1100
-  int canvasArea = maxX*maxY;//1402500
-  int rectMaxArea = canvasArea/3;//467500
-  int rectMinArea = canvasArea/10;//140250
-  int rectWidth = int(random(rectMinArea/maxY, maxX));//127.5 <-> 1275 = 128
-  int rectHeight = int(random(rectMinArea/rectWidth, min(rectMaxArea/rectWidth, maxY)));//1095.703125 <-> min(3652.34375, 1100) = 1099
+Rectangle getRandomRect(int maxX, int maxY){
+  int canvasArea = maxX*maxY;
+  int rectMaxArea = canvasArea/3;
+  int rectMinArea = canvasArea/10;
+  int rectWidth = int(random(rectMinArea/maxY, maxX));
+  int rectHeight = int(random(rectMinArea/rectWidth, min(rectMaxArea/rectWidth, maxY)));
   int rectX = int(random(maxX - rectWidth));
   int rectY = int(random(maxY - rectHeight));
   return new Rectangle(rectX, rectY, rectWidth, rectHeight);
