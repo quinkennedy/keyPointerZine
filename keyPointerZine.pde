@@ -45,11 +45,27 @@ void renderPage(PGraphics graphics, int pageWidthPx, int pageHeightPx, int pageN
   println("rendering page " + pageNumber);
   
   if (pageNumber == 0){
+    String title = "Key Point";// " + targetX + "," + targetY;
+    graphics.fill(0);
+    graphics.textSize(100);
+    int textY = (int)graphics.textAscent();
+    if (targetY < pageHeightPx/2) {
+      textY = pageHeightPx - (int)graphics.textDescent();
+    }
+    int textX = (int)map(targetX, 
+                         0, 
+                         pageWidthPx,
+                         pageWidthPx - (int)graphics.textWidth(title), 
+                         0);
+    graphics.text(title, textX, textY);
+    graphics.noStroke();
+    graphics.ellipse(targetX, targetY, 20, 20);
+    graphics.textSize(20);
+    graphics.text(targetX + ", " + targetY, targetX + 10, targetY);
+  } else {
     //drawing content
-    println("page: " + new Rectangle(0, 0, pageWidthPx, pageHeightPx).toString());
     for(int i = 0; i < subsections.length; i++){
       Section subsection = subsections[i];
-      println("s" + i + ":"+ subsection.selectedDrawings[0]+": " + subsection.placement.toString());
       graphics.image(subsection.graphic, subsection.placement.x, subsection.placement.y);
     }
   }
