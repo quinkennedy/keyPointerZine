@@ -17,13 +17,16 @@ class Foldable{
   float pageMarginIn;
   float pageWidthIn, pageHeightIn;
   int pageWidthPrintPx, pageHeightPrintPx;
+  int pageWidthPdfPx, pageHeightPdfPx;
   int pageMarginPrintPx, pageMarginPdfPx;
   
   int numCopies;
   PGraphics pdf;
   String pdfName;
-  int currCopy = 0, currPaperSide = 0, currRow = 0, currColumn = 0;
+  int currCopy = 0, currPaperSide = 0, currRow = 0, currColumn = 0, currPageIndex = 0;
   boolean endOfPdf = false;
+  
+  boolean forPrint = false;
   
   public Foldable(float paperWidth, float paperHeight, float pageMargin, int numCopies, String pdfName){
     this.paperWidthIn = paperWidth;
@@ -48,9 +51,15 @@ class Foldable{
         {{new ZinePageLayout(1, false, false),new ZinePageLayout(10, false, false)},
          {new ZinePageLayout(4, true, false),new ZinePageLayout(7, true, false)},
          {new ZinePageLayout(3, false, false),new ZinePageLayout(8, false, false)}}};
-    pdf = createGraphics(paperWidthPdfPx, paperHeightPdfPx, PDF, pdfName + ".pdf");
     pageWidthPrintPx = paperWidthPrintPx / layout[0][0].length - 2 * pageMarginPrintPx;
     pageHeightPrintPx = paperHeightPrintPx / layout[0].length - 2 * pageMarginPrintPx;
+    pageWidthPdfPx = paperWidthPdfPx / layout[0][0].length - 2 * pageMarginPdfPx;
+    pageHeightPdfPx = paperHeightPdfPx / layout[0].length - 2 * pageMarginPdfPx;
+    if (forPrint){
+      pdf = createGraphics(paperWidthPdfPx, paperHeightPdfPx, PDF, pdfName + ".pdf");
+    } else {
+      pdf = createGraphics(pageWidthPdfPx + 2 * pageMarginPdfPx, pageHeightPdfPx + 2 * pageMarginPdfPx, PDF, pdfName + ".pdf");
+    }
     pageWidthIn = paperWidthIn / layout[0][0].length - 2 * pageMarginIn;
     pageHeightIn = paperHeightIn / layout[0].length - 2 * pageMarginIn;
   }
@@ -74,27 +83,31 @@ class Foldable{
       //prep next page to allow for pre-rendering to other graphics contexts
       p.prepPage(pageWidthPrintPx,
                  pageHeightPrintPx,
-                 layoutPage.number);
+                 forPrint ? layoutPage.number : currPageIndex);
                  
       //arrange page for proper positioning
       pdf.beginDraw();
       pdf.pushMatrix();
       pdf.scale(float(pdfDPI) / printDPI);
-      pdf.translate(paperWidthPrintPx * currColumn / layout[0][0].length + pageMarginPrintPx,
-                    paperHeightPrintPx * currRow / layout[0].length + pageMarginPrintPx);
-      if (layoutPage.hFlip){
-        pdf.translate(pageWidthPrintPx,
-                      pageHeightPrintPx);
-        pdf.scale(-1, -1);
+      pdf.translate(pageMarginPrintPx, pageMarginPrintPx);
+      if (forPrint){
+        pdf.translate(paperWidthPrintPx * currColumn / layout[0][0].length,
+                      paperHeightPrintPx * currRow / layout[0].length);
+        if (layoutPage.hFlip){
+          pdf.translate(pageWidthPrintPx,
+                        pageHeightPrintPx);
+          pdf.scale(-1, -1);
+        }
       }
       p.renderPage(pdf,
                    pageWidthPrintPx,
                    pageHeightPrintPx,
-                   layoutPage.number);
+                   forPrint ? layoutPage.number : currPageIndex);
       pdf.popMatrix();
       
       //update to next zine page
       currColumn++;
+      currPageIndex++;
       if (currColumn >= layout[0][0].length){
         currColumn = 0;
         currRow++;
@@ -103,6 +116,7 @@ class Foldable{
           currPaperSide++;
           if (currPaperSide >= layout.length){
             currPaperSide = 0;
+            currPageIndex = 0;
             currCopy++;
             if (currCopy >= numCopies){
               pdf.dispose();
@@ -113,6 +127,14 @@ class Foldable{
           } else {
             ((PGraphicsPDF)pdf).nextPage();
           }
+        } else {
+          if (!forPrint){
+            ((PGraphicsPDF)pdf).nextPage();
+          }
+        }
+      } else {
+        if (!forPrint){
+          ((PGraphicsPDF)pdf).nextPage();
         }
       }
       if (!endOfPdf){

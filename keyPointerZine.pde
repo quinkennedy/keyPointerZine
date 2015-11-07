@@ -7,11 +7,13 @@ boolean newCopy = true;
 Section[] subsections;
 int margin = 10;
 Foldable foldable;
+boolean debug = false;
+boolean alternatePointSide = true;
 
 void setup(){
   size(400, 400, P2D);
   initCover();
-  foldable = new Foldable(8.5, 11, .25, 2, "test");
+  foldable = new Foldable(8.5, 11, .25, 1, "test");
   subsections = new Section[3];
   for(int i = 0; i < subsections.length; i++){
     subsections[i] = new Section();
@@ -32,7 +34,7 @@ void prepPage(int pageWidthPx, int pageHeightPx, int pageNumber){
                                           P2D);
       subsection.graphic.beginDraw();
       boolean oddPage = (pageNumber % 2 == 1);
-      int targetX = (oddPage ? (pageWidthPx - this.targetX) : this.targetX);
+      int targetX = (oddPage && alternatePointSide ? (pageWidthPx - this.targetX) : this.targetX);
       for(int j = 0; j < subsection.selectedDrawings.length; j++){
         int relativeTargetX = int(targetX - subsection.placement.x);
         int relativeTargetY = int(targetY - subsection.placement.y);
@@ -47,11 +49,13 @@ void prepPage(int pageWidthPx, int pageHeightPx, int pageNumber){
 }
 
 void renderPage(PGraphics graphics, int pageWidthPx, int pageHeightPx, int pageNumber){
-  //to be able to see pages while debugging
-  graphics.stroke(150);
-  graphics.noFill();
-  graphics.rect(0, 0, pageWidthPx, pageHeightPx);
-  println("rendering page " + pageNumber);
+  if (debug){
+    //to be able to see pages while debugging
+    graphics.stroke(150);
+    graphics.noFill();
+    graphics.rect(0, 0, pageWidthPx, pageHeightPx);
+    println("rendering page " + pageNumber);
+  }
   
   if (pageNumber == 0){
     //front cover
@@ -64,7 +68,14 @@ void renderPage(PGraphics graphics, int pageWidthPx, int pageHeightPx, int pageN
     text += "https://github.com/quinkennedy/keyPointerZine/\n";
     graphics.fill(0);
     graphics.textSize(40);
-    graphics.text(text, 50, graphics.textAscent() + 50);
+    float textY = graphics.textAscent() + 50;
+    if (targetY < pageHeightPx / 2){
+      textY += pageHeightPx / 2;
+    }
+    graphics.text(text, 50, textY);
+    boolean oddPage = (pageNumber % 2 == 1);
+    int targetX = (oddPage && alternatePointSide ? (pageWidthPx - this.targetX) : this.targetX);
+    graphics.ellipse(targetX, targetY, 10, 10);
   } else {
     //drawing content
     for(int i = 0; i < subsections.length; i++){
@@ -73,16 +84,18 @@ void renderPage(PGraphics graphics, int pageWidthPx, int pageHeightPx, int pageN
     }
   }
   
-  //to be able to see page number while debugging
-  graphics.fill(0, 100);
-  graphics.textSize(200);
-  graphics.text(pageNumber, pageWidthPx/2, pageHeightPx/2);
+  if (debug){
+    //to be able to see page number while debugging
+    graphics.fill(0, 100);
+    graphics.textSize(200);
+    graphics.text(pageNumber, pageWidthPx/2, pageHeightPx/2);
+  }
 }
 
 void initCopy(int copyNumber, int pageWidthPx, int pageHeightPx, float pageWidthIn, float pageHeightIn){
   println("prep copy " + copyNumber);
-  targetX = int(random(pageWidthPx));
-  targetY = int(random(pageHeightPx));
+  targetX = int(random(10, pageWidthPx - 10));
+  targetY = int(random(10, pageHeightPx - 10));
   newCopy = true;
 }
 
