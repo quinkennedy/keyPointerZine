@@ -9,7 +9,7 @@ Foldable foldable;
 
 void setup(){
   size(400, 400, P2D);
-  foldable = new Foldable(8.5, 11, 2, "test");
+  foldable = new Foldable(8.5, 11, .25, 2, "test");
   subsections = new Section[3];
   for(int i = 0; i < subsections.length; i++){
     subsections[i] = new Section();
@@ -21,7 +21,9 @@ void prepPage(int pageWidthPx, int pageHeightPx, int pageNumber){
   for(int i = 0; i < subsections.length; i++){
     Section subsection = subsections[i];
     chooseDrawings(subsection);
-    subsection.graphic = createGraphics(pageWidthPx, pageHeightPx, P2D);
+    subsection.graphic = createGraphics((int)subsection.placement.w, 
+                                        (int)subsection.placement.h, 
+                                        P2D);
     subsection.graphic.beginDraw();
     for(int j = 0; j < subsection.selectedDrawings.length; j++){
       int relativeTargetX = int(targetX - subsection.placement.x);
@@ -42,10 +44,14 @@ void renderPage(PGraphics graphics, int pageWidthPx, int pageHeightPx, int pageN
   graphics.rect(0, 0, pageWidthPx, pageHeightPx);
   println("rendering page " + pageNumber);
   
-  //drawing content
-  for(int i = 0; i < subsections.length; i++){
-    Section subsection = subsections[i];
-    graphics.image(subsection.graphic, subsection.placement.x, subsection.placement.y);
+  if (pageNumber == 0){
+    //drawing content
+    println("page: " + new Rectangle(0, 0, pageWidthPx, pageHeightPx).toString());
+    for(int i = 0; i < subsections.length; i++){
+      Section subsection = subsections[i];
+      println("s" + i + ":"+ subsection.selectedDrawings[0]+": " + subsection.placement.toString());
+      graphics.image(subsection.graphic, subsection.placement.x, subsection.placement.y);
+    }
   }
   
   //to be able to see page number while debugging
@@ -67,7 +73,6 @@ void draw(){
     //order matters-ish
     while(!newCopy && foldable.renderNextPage(this));
   } else {
-    println("done?");
     background(255);
     fill(0);
     text("done?", 20, 20);
@@ -87,14 +92,14 @@ void layoutSubsections(int maxX, int maxY){
   layoutSubsectionsNonOverlap(maxX, maxY);
 }
 
-Rectangle getRandomRect(int maxX, int maxY){
-  int canvasArea = maxX*maxY;
-  int rectMaxArea = canvasArea/3;
-  int rectMinArea = canvasArea/10;
-  int rectWidth = int(random(maxX - rectMinArea/maxY) + rectMinArea/maxY);
-  int rectHeight = int(random(rectMaxArea/rectWidth - rectMinArea/rectWidth) + rectMinArea/rectWidth);
-  int rectX = int(random(maxX - rectWidth - margin));
-  int rectY = int(random(maxY - rectHeight - margin));
+Rectangle getRandomRect(int maxX, int maxY){//maxX = 1275, maxY = 1100
+  int canvasArea = maxX*maxY;//1402500
+  int rectMaxArea = canvasArea/3;//467500
+  int rectMinArea = canvasArea/10;//140250
+  int rectWidth = int(random(rectMinArea/maxY, maxX));//127.5 <-> 1275 = 128
+  int rectHeight = int(random(rectMinArea/rectWidth, min(rectMaxArea/rectWidth, maxY)));//1095.703125 <-> min(3652.34375, 1100) = 1099
+  int rectX = int(random(maxX - rectWidth));
+  int rectY = int(random(maxY - rectHeight));
   return new Rectangle(rectX, rectY, rectWidth, rectHeight);
 }
 
@@ -103,8 +108,6 @@ void layoutSubsectionsRandom(int maxX, int maxY){
     subsections[i].placement = getRandomRect(maxX, maxY);
   }
 }
-
-
 
 void layoutSubsectionsNonOverlap(int maxX, int maxY){
   for(int i = 0; i < subsections.length; i++){

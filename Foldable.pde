@@ -1,26 +1,41 @@
+//naming convention:
+// descriptiveName[In | [Pdf | Print]Px]
+
 class Foldable{
   ZinePageLayout[][][] layout;
-  float paperWidth;
-  float paperHeight;
-  public static final int paperDPI = 72;
+  
+  //sheet-of-paper/pdf page measurements
+  float paperWidthIn;
+  float paperHeightIn;
+  int paperWidthPdfPx, paperHeightPdfPx;
+  int paperWidthPrintPx, paperHeightPrintPx;
+  public static final int pdfDPI = 72;
   public static final int printDPI = 300;
-  int PDFPixelWidth;
-  int PDFPixelHeight;
+  
+  //page-specific measurements
+  //(zine pages, not pieces of paper/pdf pages)
+  float pageMarginIn;
+  float pageWidthIn, pageHeightIn;
+  int pageWidthPrintPx, pageHeightPrintPx;
+  int pageMarginPrintPx, pageMarginPdfPx;
+  
   int numCopies;
-  int printPixelWidth, printPixelHeight;
   PGraphics pdf;
   String pdfName;
-  int currCopy = 0, currPage = 0, currRow = 0, currColumn = 0;
+  int currCopy = 0, currPaperSide = 0, currRow = 0, currColumn = 0;
   boolean endOfPdf = false;
   
-  public Foldable(float paperWidth, float paperHeight, int numCopies, String pdfName){
-    this.paperWidth = paperWidth;
-    this.paperHeight = paperHeight;
+  public Foldable(float paperWidth, float paperHeight, float pageMargin, int numCopies, String pdfName){
+    this.paperWidthIn = paperWidth;
+    this.paperHeightIn = paperHeight;
+    this.pageMarginIn = pageMargin;
     this.numCopies = numCopies;
-    PDFPixelWidth = int(paperWidth * paperDPI);
-    PDFPixelHeight = int(paperHeight * paperDPI);
-    printPixelWidth = int(paperWidth * printDPI);
-    printPixelHeight = int(paperHeight * printDPI);
+    paperWidthPdfPx = int(paperWidth * pdfDPI);
+    paperHeightPdfPx = int(paperHeight * pdfDPI);
+    pageMarginPdfPx = int(pageMargin * pdfDPI);
+    paperWidthPrintPx = int(paperWidth * printDPI);
+    paperHeightPrintPx = int(paperHeight * printDPI);
+    pageMarginPrintPx = int(pageMargin * printDPI);
     this.pdfName = pdfName;
     int pageSides = 2;//because double-sided
     //just hard-code it since getLayout doesn't handle thirds yet
@@ -33,7 +48,11 @@ class Foldable{
         {{new ZinePageLayout(1, false, false),new ZinePageLayout(10, false, false)},
          {new ZinePageLayout(4, true, false),new ZinePageLayout(7, true, false)},
          {new ZinePageLayout(3, false, false),new ZinePageLayout(8, false, false)}}};
-    pdf = createGraphics(PDFPixelWidth, PDFPixelHeight, PDF, pdfName + ".pdf");
+    pdf = createGraphics(paperWidthPdfPx, paperHeightPdfPx, PDF, pdfName + ".pdf");
+    pageWidthPrintPx = paperWidthPrintPx / layout[0][0].length - 2 * pageMarginPrintPx;
+    pageHeightPrintPx = paperHeightPrintPx / layout[0].length - 2 * pageMarginPrintPx;
+    pageWidthIn = paperWidthIn / layout[0][0].length - 2 * pageMarginIn;
+    pageHeightIn = paperHeightIn / layout[0].length - 2 * pageMarginIn;
   }
   
   /*
@@ -41,36 +60,36 @@ class Foldable{
    */
   public boolean renderNextPage(keyPointerZine p){
     if (!endOfPdf){
-      ZinePageLayout layoutPage = layout[currPage][currRow][currColumn];
+      ZinePageLayout layoutPage = layout[currPaperSide][currRow][currColumn];
       
       //initialize copy before first zine page
-      if (currPage == 0 && currRow == 0 && currColumn == 0){
+      if (currPaperSide == 0 && currRow == 0 && currColumn == 0){
         p.initCopy(currCopy, 
-            printPixelWidth / layout[0][0].length, 
-            printPixelHeight / layout[0].length,
-            paperWidth / layout[0][0].length,
-            paperHeight / layout[0].length);
+                   pageWidthPrintPx,
+                   pageHeightPrintPx,
+                   pageWidthIn,
+                   pageHeightIn);
       }
       
       //prep next page to allow for pre-rendering to other graphics contexts
-      p.prepPage(printPixelWidth / layout[0][0].length, 
-                 printPixelHeight / layout[0].length,
+      p.prepPage(pageWidthPrintPx,
+                 pageHeightPrintPx,
                  layoutPage.number);
                  
       //arrange page for proper positioning
       pdf.beginDraw();
       pdf.pushMatrix();
-      pdf.translate(PDFPixelWidth * currColumn / layout[0][0].length,
-                    PDFPixelHeight * currRow / layout[0].length);
+      pdf.scale(float(pdfDPI) / printDPI);
+      pdf.translate(paperWidthPrintPx * currColumn / layout[0][0].length + pageMarginPrintPx,
+                    paperHeightPrintPx * currRow / layout[0].length + pageMarginPrintPx);
       if (layoutPage.hFlip){
-        pdf.translate(PDFPixelWidth / layout[0][0].length,
-                      PDFPixelHeight / layout[0].length);
+        pdf.translate(pageWidthPrintPx,
+                      pageHeightPrintPx);
         pdf.scale(-1, -1);
       }
-      pdf.scale(float(paperDPI) / printDPI);
-      p.renderPage(pdf, 
-                   printPixelWidth / layout[0][0].length, 
-                   printPixelHeight / layout[0].length,
+      p.renderPage(pdf,
+                   pageWidthPrintPx,
+                   pageHeightPrintPx,
                    layoutPage.number);
       pdf.popMatrix();
       
@@ -81,9 +100,9 @@ class Foldable{
         currRow++;
         if (currRow >= layout[0].length){
           currRow = 0;
-          currPage++;
-          if (currPage >= layout.length){
-            currPage = 0;
+          currPaperSide++;
+          if (currPaperSide >= layout.length){
+            currPaperSide = 0;
             currCopy++;
             if (currCopy >= numCopies){
               pdf.dispose();
@@ -101,23 +120,5 @@ class Foldable{
       }
     }
     return !endOfPdf;
-  }
-  
-  /**
-   * pageNo is 0-indexed (0 is the front cover)
-   */
-  public PGraphics getPage(int pageNo){
-    for(int page = 0 ; page < layout.length; page++){
-      for(int row = 0; row < layout[0].length; row++){
-        for(int column = 0; column < layout[0][0].length; column++){
-          //find the correctly-numbered cell
-          if (layout[page][row][column].number == pageNo){
-            
-          }
-        }
-      }
-    }
-    //cell number doesn't exist!
-    return null;
   }
 }
