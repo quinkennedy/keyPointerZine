@@ -16,7 +16,7 @@ void setup(){
   size(400, 400, P2D);
   initCover();
   backCoverFont = createFont("SourceCodePro-Medium.ttf", backCoverFontSize);
-  foldable = new Foldable(8.5, 11, .25, 50, "run1");
+  foldable = new Foldable(8.5, 11, .25, 1, "demo");
   subsections = new Section[3];
   for(int i = 0; i < subsections.length; i++){
     subsections[i] = new Section();
@@ -25,8 +25,10 @@ void setup(){
 
 void prepPage(int pageWidthPx, int pageHeightPx, int pageNumber){
   if (pageNumber == 0){
+    //front cover
     prepCover(pageWidthPx, pageHeightPx, pageNumber);
   } else if (pageNumber == 11){
+    //back cover (nothing to prep, draws directly on PDF)
   } else {
     layoutSubsections(pageWidthPx, pageHeightPx);
     for(int i = 0; i < subsections.length; i++){
@@ -67,6 +69,7 @@ void renderPage(PGraphics graphics, int pageWidthPx, int pageHeightPx, int pageN
     //back cover
     graphics.textFont(backCoverFont);
     String text = "a generative zine\n";
+    //text += "printed for C.A.B. 2015\n";
     text += "produced by PaperBon.net\n";
     text += "code available at\n";
     text += "https://github.com/quinkennedy/keyPointerZine/\n";
@@ -96,8 +99,40 @@ void renderPage(PGraphics graphics, int pageWidthPx, int pageHeightPx, int pageN
   }
 }
 
+//with large copy numbers (> 80) the render was failing
+// possibly due to memory leak
+// so this helps graph the memory over time
+void showMemory(){
+  // The amount of memory allocated so far (usually the -Xms setting)
+  long allocated = Runtime.getRuntime().totalMemory();
+  
+  // Free memory out of the amount allocated (value above minus used)
+  long free = Runtime.getRuntime().freeMemory();
+  
+  // The maximum amount of memory that can eventually be consumed
+  // by this application. This is the value set by the Preferences
+  // dialog box to increase the memory settings for an application.
+  long maximum = Runtime.getRuntime().maxMemory();
+  
+  long used = allocated - free;
+  long points = 20;
+  long fullPoints = used * points / maximum;
+  print("mem: ");
+  int i = 0;
+  for(; i < fullPoints && i < points; i++){
+    print("#");
+  }
+  for(; i < points; i++){
+    print("_");
+  }
+  
+  println(" " + used + " / " + maximum);
+}
+
 void initCopy(int copyNumber, int pageWidthPx, int pageHeightPx, float pageWidthIn, float pageHeightIn){
   println("prep copy " + copyNumber);
+  showMemory();
+    
   targetX = int(random(10, pageWidthPx - 10));
   targetY = int(random(10, pageHeightPx - 10));
   newCopy = true;

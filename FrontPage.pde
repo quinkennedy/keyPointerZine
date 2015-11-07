@@ -38,6 +38,7 @@ void prepCover(int pageWidthPx, int pageHeightPx, int pageNumber){
   titleImage.background(255);
   titleImage.translate(pageWidthPx / 2, pageHeightPx / 2);
   titleImage.stroke(0);
+  titleImage.strokeWeight(1);
   for(int i = 0; i < titlePoints.length; i++){
     titleImage.line(titlePoints[i].x, titlePoints[i].y, targetX, targetY);
   }

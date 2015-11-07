@@ -26,7 +26,7 @@ class Foldable{
   int currCopy = 0, currPaperSide = 0, currRow = 0, currColumn = 0, currPageIndex = 0;
   boolean endOfPdf = false;
   
-  boolean forPrint = true;
+  boolean forPrint = false;
   
   public Foldable(float paperWidth, float paperHeight, float pageMargin, int numCopies, String pdfName){
     this.paperWidthIn = paperWidth;
@@ -108,32 +108,48 @@ class Foldable{
       //update to next zine page
       currColumn++;
       currPageIndex++;
+      boolean finishedPage = false;
       if (currColumn >= layout[0][0].length){
         currColumn = 0;
         currRow++;
         if (currRow >= layout[0].length){
           currRow = 0;
           currPaperSide++;
+          finishedPage = true;
           if (currPaperSide >= layout.length){
             currPaperSide = 0;
             currPageIndex = 0;
             currCopy++;
-            if (currCopy >= numCopies){
-              pdf.dispose();
-              endOfPdf = true;
-            } else {
-              ((PGraphicsPDF)pdf).nextPage();
-            }
-          } else {
-            ((PGraphicsPDF)pdf).nextPage();
           }
         } else {
           if (!forPrint){
-            ((PGraphicsPDF)pdf).nextPage();
+            finishedPage = true;
           }
         }
       } else {
         if (!forPrint){
+          finishedPage = true;
+        }
+      }
+      if (finishedPage){
+        if (forPrint){
+          //draw lines along cuts
+          int lineLength = 20;
+          pdf.stroke(100);
+          pdf.strokeWeight(.5);
+          pdf.line((pdf.width - lineLength) / 2,
+                   pdf.height / 3,
+                   (pdf.width + lineLength) / 2,
+                   pdf.height / 3);
+          pdf.line((pdf.width - lineLength) / 2,
+                   pdf.height * 2 / 3,
+                   (pdf.width + lineLength) / 2,
+                   pdf.height * 2 / 3);
+        }
+        if (currCopy >= numCopies){
+          pdf.dispose();
+          endOfPdf = true;
+        } else {
           ((PGraphicsPDF)pdf).nextPage();
         }
       }
