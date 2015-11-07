@@ -16,7 +16,7 @@ void setup(){
   size(400, 400, P2D);
   initCover();
   backCoverFont = createFont("SourceCodePro-Medium.ttf", backCoverFontSize);
-  foldable = new Foldable(8.5, 11, .25, 1, "test");
+  foldable = new Foldable(8.5, 11, .25, 50, "run1");
   subsections = new Section[3];
   for(int i = 0; i < subsections.length; i++){
     subsections[i] = new Section();

@@ -26,7 +26,7 @@ class Foldable{
   int currCopy = 0, currPaperSide = 0, currRow = 0, currColumn = 0, currPageIndex = 0;
   boolean endOfPdf = false;
   
-  boolean forPrint = false;
+  boolean forPrint = true;
   
   public Foldable(float paperWidth, float paperHeight, float pageMargin, int numCopies, String pdfName){
     this.paperWidthIn = paperWidth;
