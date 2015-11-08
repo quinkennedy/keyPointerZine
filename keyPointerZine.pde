@@ -3,6 +3,7 @@ import processing.pdf.*;
 int numberDrawings = 5;
 int targetX, targetY;
 boolean newCopy = true;
+boolean forDisplay = false;
 
 Section[] subsections;
 int margin = 10;
@@ -10,13 +11,15 @@ Foldable foldable;
 boolean debug = false;
 boolean alternatePointSide = true;
 PFont backCoverFont;
-int backCoverFontSize = 35;
+int backCoverFontSize = 20;
 
 void setup(){
-  size(400, 400, P2D);
-  initCover();
-  backCoverFont = createFont("SourceCodePro-Medium.ttf", backCoverFontSize);
-  foldable = new Foldable(8.5, 11, .25, 1, "demo");
+  size(800, 800, P2D);
+  if (!forDisplay){
+    initCover();
+    backCoverFont = createFont("SourceCodePro-Medium.ttf", backCoverFontSize);
+    foldable = new Foldable(8.5, 11, .25, 1, "test");
+  }
   subsections = new Section[3];
   for(int i = 0; i < subsections.length; i++){
     subsections[i] = new Section();
@@ -68,11 +71,10 @@ void renderPage(PGraphics graphics, int pageWidthPx, int pageHeightPx, int pageN
   } else if (pageNumber == 11){
     //back cover
     graphics.textFont(backCoverFont);
-    String text = "a generative zine\n";
-    //text += "printed for C.A.B. 2015\n";
-    text += "produced by PaperBon.net\n";
-    text += "code available at\n";
-    text += "https://github.com/quinkennedy/keyPointerZine/\n";
+    String text = "a generative zine where every copy is different\n";
+    text += "each copy has a unique Key Point around which the drawings center\n";
+    text += "developed and produced by Quin Kennedy under PaperBon.net\n";
+    text += "code available at https://github.com/quinkennedy/keyPointerZine/\n";
     graphics.fill(0);
     graphics.textSize(backCoverFontSize);
     float textY = graphics.textAscent() + 50;
@@ -139,14 +141,31 @@ void initCopy(int copyNumber, int pageWidthPx, int pageHeightPx, float pageWidth
 }
 
 void draw(){
-  if (newCopy){
-    newCopy = false;
-    //order matters-ish
-    while(!newCopy && foldable.renderNextPage(this));
+  if (forDisplay){
+    if (newCopy){
+      background(255);
+      prepPage(width, height, 1);
+      renderPage(g, width, height, 1);
+      newCopy = false;
+    }
   } else {
-    background(255);
-    fill(0);
-    text("done?", 20, 20);
+    if (newCopy){
+      newCopy = false;
+      //order matters-ish
+      while(!newCopy && foldable.renderNextPage(this));
+    } else {
+      background(255);
+      fill(0);
+      text("done?", 20, 20);
+    }
+  }
+}
+
+void keyPressed(){
+  if (forDisplay){
+    if (key == ENTER){
+      initCopy(0, width, height, width, height);
+    }
   }
 }
 
@@ -165,8 +184,8 @@ void layoutSubsections(int maxX, int maxY){
 
 Rectangle getRandomRect(int maxX, int maxY){
   int canvasArea = maxX*maxY;
-  int rectMaxArea = canvasArea/3;
-  int rectMinArea = canvasArea/10;
+  int rectMaxArea = canvasArea/4;
+  int rectMinArea = canvasArea/6;
   int rectWidth = int(random(rectMinArea/maxY, maxX));
   int rectHeight = int(random(rectMinArea/rectWidth, min(rectMaxArea/rectWidth, maxY)));
   int rectX = int(random(maxX - rectWidth));
@@ -183,7 +202,15 @@ void layoutSubsectionsRandom(int maxX, int maxY){
 void layoutSubsectionsNonOverlap(int maxX, int maxY){
   for(int i = 0; i < subsections.length; i++){
     boolean fit = false;
+    int attempts = 1;
     while(!fit){
+      if (attempts % 5000 == 0 && i > 1){
+        i -= 2;
+        println("undo previous two rects!");
+      } else if (attempts % 500 == 0 && i > 0){
+        i--;
+        println("undo previous rect!");
+      }
       subsections[i].placement = getRandomRect(maxX, maxY);
       Rectangle bloated = subsections[i].placement.bloat(margin);
       fit = true;
@@ -192,6 +219,7 @@ void layoutSubsectionsNonOverlap(int maxX, int maxY){
           fit = false;
         }
       }
+      attempts++;
     }
   }
 }

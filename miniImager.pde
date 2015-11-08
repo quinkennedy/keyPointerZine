@@ -1,5 +1,6 @@
 void doDrawing(PGraphics graphics, int num, int targetX, int targetY){
   int options = 0;
+  //graphics.background(245);
   switch(num){
     case 0:
       options = int(random(8));
